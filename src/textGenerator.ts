@@ -140,7 +140,7 @@ const promptInfo=
         }
         console.log("Full text: " + requestResults.outputs[0].data.text["raw"]);
         console.log("Input Text: " + requestResults.outputs[0].input.data.text["raw"]);
-        const text = requestResults.outputs[0].data.text["raw"].replace(requestResults.outputs[0].input.data.text["raw"], " ");
+        const text = requestResults.outputs[0].data.text["raw"].replace(requestResults.outputs[0].input.data.text["raw"], "");
         
         // const text = requestResults.outputs[0].data.text["raw"];
         // const text = eval(extractResult);
