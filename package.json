@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-textgenerator-plugin",
-	"version": "0.1.17",
-	"description": "Text generator is a handy plugin that helps you generate text content using GPT-3 (OpenAI).",
+	"name": "obsidian-clarifai-content-plugin",
+	"version": "0.1.0",
+	"description": "This plugin allows you to access the Clarifai platform to generate text (GPT2) or images (dall-e).  This plugin is based on the obsidian-textgenerator-plugin.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
