@@ -8,17 +8,22 @@ type Context= {
   includeHighlights:boolean;
 }
 
-type TextGeneratorSettings= {
-	api_key: string;
-	engine: string;
-	max_tokens: number;
-	temperature: number;
-	frequency_penalty: number;
-	prompt: string;
-  promptsPath: string;
-	showStatusBar: boolean;
+type ClarifaiTextGeneratorSettings= {
+	pat: string;
+  model: string;
+  prompt: string;
   models: any;
-  context:Context;
+  models_versions: any;
+  user_id: string;
+  app_id: string;
+
+	max_tokens: number;
+
+	// frequency_penalty: number;
+	promptsPath: string;
+	showStatusBar: boolean;
+  
+  context: Context;
 }
 
 type TextGeneratorConfiguration = {
@@ -74,11 +79,11 @@ type Model = {
 export type {
   FileViewMode,
   NewTabDirection,
-	TextGeneratorSettings,
 	PromptTemplate,
   PackageTemplate,
   Model,
   Context,
   InstalledPackage,
-  TextGeneratorConfiguration
+  TextGeneratorConfiguration,
+  ClarifaiTextGeneratorSettings
 }

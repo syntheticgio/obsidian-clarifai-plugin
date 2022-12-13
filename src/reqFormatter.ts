@@ -1,5 +1,5 @@
 import {App,addIcon, Notice, Plugin, PluginSettingTab, Setting, request, MarkdownView, Editor, parseFrontMatterAliases} from 'obsidian';
-import {TextGeneratorSettings} from './types';
+import {ClarifaiTextGeneratorSettings} from './types';
 import TextGeneratorPlugin from './main';
 import {IGNORE_IN_YMAL} from './constants';
 import ContextManager from './ContextManager';
@@ -14,7 +14,7 @@ export default class ReqFormatter {
         this.contextManager=contextManager;
 	}
 
-    addContext(parameters: TextGeneratorSettings,prompt: string){
+    addContext(parameters: ClarifaiTextGeneratorSettings,prompt: string){
         const params={
            ...parameters,
            prompt	
@@ -22,31 +22,37 @@ export default class ReqFormatter {
        return params;
    }
    
-    prepareReqParameters(params: TextGeneratorSettings,insertMetadata: boolean,templatePath:string="") {
+    prepareReqParameters(params: ClarifaiTextGeneratorSettings,insertMetadata: boolean,templatePath:string="") {
+        // TODO: Need to make the actual request here....
        let bodyParams:any = {
-           "prompt": params.prompt,
-           "max_tokens": params.max_tokens,
-           "temperature": params.temperature,
-           "frequency_penalty": params.frequency_penalty,
+            "inputs": [
+                {
+                    "data": {
+                        "text": {
+                            "raw": params.prompt
+                        }
+                    }
+                }
+            ]
+        //    "max_tokens": params.max_tokens,
        };
        
-       
        let reqParams = {
-           url: `https://api.openai.com/v1/engines/${params.engine}/completions`,
+           url: `https://api.clarifai.com/v2/users/${params.user_id}/apps/${params.app_id}/models/${params.model}/outputs`,
            method: 'POST',
            body:'',
            headers: {
                "Content-Type": "application/json",
-               "Authorization": `Bearer ${params.api_key}`
+               "Authorization": `Key ${params.pat}`
            },
-           extractResult: "requestResults?.choices[0].text"
+        //    extractResult: "requestResults?.choices[0].text"
        }
+       console.log("URL: " + reqParams.url);
    
        if (insertMetadata) {
            const activefileFrontmatter =  this.contextManager.getMetaData()?.frontmatter;
            const templateFrontmatter =  this.contextManager.getMetaData(templatePath)?.frontmatter;
            const frontmatter = {...templateFrontmatter,...activefileFrontmatter};
-           //console.log({templateFrontmatter,activefileFrontmatter,frontmatter});
            if (frontmatter == null) {
                new Notice("No valid Metadata (YAML front matter) found!");
            } else {
@@ -64,10 +70,10 @@ export default class ReqFormatter {
                
                reqParams.body=	JSON.stringify(bodyParams);
    
-               if (frontmatter["config"]?.output) 
-               {
-                   reqParams.extractResult= frontmatter["config"]?.output
-               }
+            //    if (frontmatter["config"]?.output) 
+            //    {
+            //        reqParams.extractResult= frontmatter["config"]?.output
+            //    }
    
                if(frontmatter["reqParams"] && frontmatter["config"]?.append?.reqParams==false){
                    reqParams = frontmatter["reqParams"];
@@ -79,7 +85,8 @@ export default class ReqFormatter {
            reqParams.body=	JSON.stringify(bodyParams);
        }
 
-       console.log({bodyParams,reqParams});
+    //    console.log("Return value: ");
+    //    console.log({bodyParams,reqParams});
        return reqParams;
    }
 }

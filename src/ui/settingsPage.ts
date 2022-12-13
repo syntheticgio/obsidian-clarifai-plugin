@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting, Notice,request } from 'obsidian';
 import TextGeneratorPlugin from '../main';
 
+
 export default class TextGeneratorSettingTab extends PluginSettingTab {
 	plugin: TextGeneratorPlugin;
 
@@ -8,12 +9,12 @@ export default class TextGeneratorSettingTab extends PluginSettingTab {
 		super(app, plugin);
 		this.plugin = plugin;
 		let models=new Map();
-		if (this.plugin.settings.models?.size>0){
-			models=this.plugin.settings.models;
-		}else {
-			["text-davinci-003","text-davinci-002","text-davinci-001","text-curie-001","text-babbage-001","text-ada-001"].forEach(e=>models.set(e,''));
-			this.plugin.settings.models = models;
-			this.plugin.saveSettings();
+		if (this.plugin.clarifaiSettings.models?.size>0){
+			models=this.plugin.clarifaiSettings.models;
+		} else {
+			["text-generation-english-gpt2", "text-generation-poems-chinese-gpt2"].forEach(e=>models.set(e,''));
+			this.plugin.clarifaiSettings.models = models;
+			this.plugin.saveClarifaiSettings();
 		}
 	}
 
@@ -27,22 +28,56 @@ export default class TextGeneratorSettingTab extends PluginSettingTab {
 		containerEl.createEl('H1', {
 			text: 'Text Generator Plugin Settings'
 		});
-		
-		containerEl.createEl('H1', {
-			text: 'OpenAI Settings'
-		});
-		containerEl.appendChild(createEl("a", {text: 'API documentation',href:"https://beta.openai.com/docs/api-reference/introduction",cls:'linkMoreInfo'}))
-		let inputEl
 
-		const apikeuEl=new Setting(containerEl)
-			.setName('API Key')
-			.setDesc('You need to create an account in OpenAI to generate an API Key.')
+		containerEl.createEl('H2', {
+			text: 'Clarifai Settings'
+		});
+		let inputEl;
+		containerEl.appendChild(createEl("a", {text: 'Create Clarifai account',href:"https://clarifai.com/signup?utm_source=clarifai-obsidian-plugin&utm_medium=referral", cls:'linkMoreInfo'}))
+		
+		// const ClarifaiUsername=new Setting(containerEl)
+		// 	.setName('Username')
+		// 	.setDesc('Enter your Clarifai platform username.')
+		// 	.addText(text => text
+		// 		.setPlaceholder('Enter your username')
+		// 		.setValue(this.plugin.clarifaiSettings.user_id)
+		// 		.onChange(async (value) => {
+		// 			this.plugin.clarifaiSettings.user_id = value;
+		// 			await this.plugin.saveClarifaiSettings();
+		// 		}
+		// 		)
+		// 		.then((textEl)=>{
+		// 			inputEl=textEl
+		// 		})
+		// 		.inputEl.setAttribute('type','clear')
+		// 		)
+		// const ClarifaiAppID=new Setting(containerEl)
+		// 	.setName('Application ID')
+		// 	.setDesc('Enter an application ID.  You can create an application for the purposes of calling this model.')
+		// 	.addText(text => text
+		// 		.setPlaceholder('Enter your application ID')
+		// 		.setValue(this.plugin.clarifaiSettings.app_id)
+		// 		.onChange(async (value) => {
+		// 			this.plugin.clarifaiSettings.app_id = value;
+		// 			await this.plugin.saveClarifaiSettings();
+		// 		}
+		// 		)
+		// 		.then((textEl)=>{
+		// 			inputEl=textEl
+		// 		})
+		// 		.inputEl.setAttribute('type','clear')
+		// 		)
+
+		
+		const ClarifaiPAT=new Setting(containerEl)
+			.setName('PAT')
+			.setDesc('You will need a Personal Access Token (PAT) from the Clarifai platform.  The minimal permission scoping required for text generation is the predict scope.')
 			.addText(text => text
-				.setPlaceholder('Enter your API Key')
-				.setValue(this.plugin.settings.api_key)
+				.setPlaceholder('Enter your PAT')
+				.setValue(this.plugin.clarifaiSettings.pat)
 				.onChange(async (value) => {
-					this.plugin.settings.api_key = value;
-					await this.plugin.saveSettings();
+					this.plugin.clarifaiSettings.pat = value;
+					await this.plugin.saveClarifaiSettings();
 				}
 				)
 				.then((textEl)=>{
@@ -50,8 +85,7 @@ export default class TextGeneratorSettingTab extends PluginSettingTab {
 				})
 				.inputEl.setAttribute('type','password')
 				)
-		
-		apikeuEl.addToggle(v => v
+		ClarifaiPAT.addToggle(v => v
 			.onChange( (value) => {
 				if(value) {
 					inputEl.inputEl.setAttribute('type','clear')
@@ -60,113 +94,60 @@ export default class TextGeneratorSettingTab extends PluginSettingTab {
 					inputEl.inputEl.setAttribute('type','password')
 				}
 			}));
-		
-
-		containerEl.appendChild(createEl("a", {text: 'Create account OpenAI',href:"https://beta.openai.com/signup/",cls:'linkMoreInfo'}))
+		containerEl.appendChild(createEl("a", {text: 'PAT documentation',href:"https://docs.clarifai.com/clarifai-basics/authentication/personal-access-tokens", cls:'linkMoreInfo'}))
+	
 		
 		let models=new Map();
-		if (this.plugin.settings.models?.size>0){
-			models=this.plugin.settings.models;
-		}else {
-			["text-davinci-003","text-davinci-002","text-davinci-001","text-curie-001","text-babbage-001","text-ada-001"].forEach(e=>models.set(e,''));
-			this.plugin.settings.models = models;
-			this.plugin.saveSettings();
+		if (this.plugin.clarifaiSettings.models?.size>0){
+			models=this.plugin.clarifaiSettings.models;
+		} else {
+			["text-generation-english-gpt2", "text-generation-poems-chinese-gpt2"].forEach(e=>models.set(e,''));
+			this.plugin.clarifaiSettings.models = models;
+			this.plugin.saveClarifaiSettings();
 		}
 		
 		let cbModelsEl:any
 		new Setting(containerEl)
 			.setName('Model')
-			.setDesc('text-davinci-002 is Most capable model. text-ada-001 is the fastest model.')
+			.setDesc('GPT2 is a transformers based model trained on a large amount of English data.')
 			.addDropdown((cb) => {
 				cbModelsEl =cb;
 				models.forEach((value,key)=>{
 					cb.addOption(key, key);
-					
 				})
-				cb.setValue(this.plugin.settings.engine);
+				cb.setValue(this.plugin.clarifaiSettings.model);
 				cb.onChange(async (value) => {
-					this.plugin.settings.engine = value;
-					await this.plugin.saveSettings();
+					this.plugin.clarifaiSettings.model = value;
+					// TODO: Probably a better way to do this but need a three way map; maybe a dict but
+					//	     don't feel like modifying the code substantially :D
+					if (value == "text-generation-english-gpt2" || value == "text-generation-poems-chinese-gpt2") {
+						this.plugin.clarifaiSettings.user_id = "textgen";
+						this.plugin.clarifaiSettings.app_id = "text-generation";
+					}
+					await this.plugin.saveClarifaiSettings();
 				});
-				
-			
 			})
-			.addButton((btn) =>
-        btn
-          .setButtonText("Update modeles")
-          .setCta()
-          .onClick(async() => {
-		  if(this.plugin.settings.api_key.length > 0) {
-			let reqParams = {
-				url: `https://api.openai.com/v1/models`,
-				method: 'GET',
-				body:'',
-				headers: {
-					"Content-Type": "application/json",
-					"Authorization": `Bearer ${this.plugin.settings.api_key}`
-				},
-			}
-
-			const requestResults = JSON.parse(await request(reqParams));
-            requestResults.data.forEach(async (model) => {
-				if(!models.get(model.id)) {
-					cbModelsEl.addOption(model.id, model.id);
-					models.set(model.id,"");
-
-					
-				}
-			});
-			this.plugin.settings.models=models;
-			await this.plugin.saveSettings();
-		  } else {
-
-			console.error("Please provide a valide api key.");
-		  }
-			
-
-          }));
-			containerEl.appendChild(createEl("a", {text: 'more information',href:"https://beta.openai.com/docs/models/overview",cls:'linkMoreInfo'}))
+		
+		containerEl.appendChild(createEl("a", {text: 'Model information',href:"https://clarifai.com/textgen/text-generation/models/text-generation-english-gpt2", cls:'linkMoreInfo'}))
 
 		containerEl.createEl('H2', {
 				text: 'Prompt parameters (completions)'
 			});	
-		containerEl.createEl('H3', {
-				text: 'You can specify more paramters in the Frontmatter YMAL'
-			});	
-		containerEl.appendChild(createEl("a", {text: 'API documentation',href:"https://beta.openai.com/docs/api-reference/completions",cls:'linkMoreInfo'}))	
+		// containerEl.createEl('H3', {
+		// 		text: 'You can specify more paramters in the Frontmatter YMAL'
+		// 	});	
+		// containerEl.appendChild(createEl("a", {text: 'API documentation',href:"https://beta.openai.com/docs/api-reference/completions",cls:'linkMoreInfo'}))	
 		new Setting(containerEl)
 			.setName('Max tokens')
 			.setDesc('The max number of the tokens that will be generated (1000 tokens ~ 750 words)')
 			.addText(text => text
 				.setPlaceholder('max_tokens')
-				.setValue(this.plugin.settings.max_tokens.toString())
+				.setValue(this.plugin.clarifaiSettings.max_tokens.toString())
 				.onChange(async (value) => {
-					this.plugin.settings.max_tokens = parseInt(value);
-					await this.plugin.saveSettings();
+					this.plugin.clarifaiSettings.max_tokens = parseInt(value);
+					await this.plugin.saveClarifaiSettings();
 				}));
 
-		new Setting(containerEl)
-			.setName('Temperature')
-			.setDesc('temperature')
-			.addText(text => text
-				.setPlaceholder('temperature')
-				.setValue(this.plugin.settings.temperature.toString())
-				.onChange(async (value) => {
-					this.plugin.settings.temperature = parseFloat(value);
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName('Frequency Penalty')
-			.setDesc('frequency_penalty')
-			.addText(text => text
-				
-				.setValue(this.plugin.settings.frequency_penalty.toString())
-				.onChange(async (value) => {
-					this.plugin.settings.frequency_penalty = parseFloat(value);
-					await this.plugin.saveSettings();
-				})
-				);
 		containerEl.createEl('H1', {
 					text: 'Text Generator'
 				});	
@@ -174,23 +155,23 @@ export default class TextGeneratorSettingTab extends PluginSettingTab {
 					text: 'General'
 				});	
 		new Setting(containerEl)
-			.setName('Show Status in  StatusBar')
+			.setName('Show Status in StatusBar')
 			.setDesc('Show information in the Status Bar')
 			.addToggle(v => v
-				.setValue(this.plugin.settings.showStatusBar)
+				.setValue(this.plugin.clarifaiSettings.showStatusBar)
 				.onChange(async (value) => {
-					this.plugin.settings.showStatusBar = value;
-					await this.plugin.saveSettings();
+					this.plugin.clarifaiSettings.showStatusBar = value;
+					await this.plugin.saveClarifaiSettings();
 				}));
 
        const pathTempEl= new Setting(containerEl)
         .setName('Prompts Templates Path')
         .setDesc('Path of Prompts Templates')
         .addText(text => text
-            .setValue(this.plugin.settings.promptsPath)
+            .setValue(this.plugin.clarifaiSettings.promptsPath)
             .onChange(async (value) => {
-                this.plugin.settings.promptsPath = value;
-                await this.plugin.saveSettings();
+                this.plugin.clarifaiSettings.promptsPath = value;
+                await this.plugin.saveClarifaiSettings();
             })
 			.inputEl.setAttribute('size','50')
 			)
@@ -199,16 +180,14 @@ export default class TextGeneratorSettingTab extends PluginSettingTab {
 				text: 'Considered Context'
 			});	
 		
-
-
 		new Setting(containerEl)
 		.setName('includeTitle')
 		.setDesc('Include the title of the active document in the considered context.')
 		.addToggle(v => v
-			.setValue(this.plugin.settings.context.includeTitle)
+			.setValue(this.plugin.clarifaiSettings.context.includeTitle)
 			.onChange(async (value) => {
-				this.plugin.settings.context.includeTitle = value;
-				await this.plugin.saveSettings();
+				this.plugin.clarifaiSettings.context.includeTitle = value;
+				await this.plugin.saveClarifaiSettings();
 			}));
 				
 
@@ -216,10 +195,10 @@ export default class TextGeneratorSettingTab extends PluginSettingTab {
 		.setName('staredBlocks')
 		.setDesc('Include stared blocks in the considered context.')
 		.addToggle(v => v
-			.setValue(this.plugin.settings.context.includeStaredBlocks)
+			.setValue(this.plugin.clarifaiSettings.context.includeStaredBlocks)
 			.onChange(async (value) => {
-				this.plugin.settings.context.includeStaredBlocks = value;
-				await this.plugin.saveSettings();
+				this.plugin.clarifaiSettings.context.includeStaredBlocks = value;
+				await this.plugin.saveClarifaiSettings();
 			}));
 		
 		containerEl.createEl('H3', {
@@ -230,53 +209,50 @@ export default class TextGeneratorSettingTab extends PluginSettingTab {
 			.setName('includeFrontmatter')
 			.setDesc('Include frontmatter')
 			.addToggle(v => v
-				.setValue(this.plugin.settings.context.includeFrontmatter)
+				.setValue(this.plugin.clarifaiSettings.context.includeFrontmatter)
 				.onChange(async (value) => {
-					this.plugin.settings.context.includeFrontmatter = value;
-					await this.plugin.saveSettings();
+					this.plugin.clarifaiSettings.context.includeFrontmatter = value;
+					await this.plugin.saveClarifaiSettings();
 				}));
 		
 		new Setting(containerEl)
 				.setName('includeHeadings')
 				.setDesc('Include headings with their content.')
 				.addToggle(v => v
-					.setValue(this.plugin.settings.context.includeHeadings)
+					.setValue(this.plugin.clarifaiSettings.context.includeHeadings)
 					.onChange(async (value) => {
-						this.plugin.settings.context.includeHeadings = value;
-						await this.plugin.saveSettings();
+						this.plugin.clarifaiSettings.context.includeHeadings = value;
+						await this.plugin.saveClarifaiSettings();
 					}));
 
 		new Setting(containerEl)
 				.setName('includeChildren')
 				.setDesc('Include of the content of internal md links on the page.')
 				.addToggle(v => v
-					.setValue(this.plugin.settings.context.includeChildren)
+					.setValue(this.plugin.clarifaiSettings.context.includeChildren)
 					.onChange(async (value) => {
-						this.plugin.settings.context.includeChildren = value;
-						await this.plugin.saveSettings();
+						this.plugin.clarifaiSettings.context.includeChildren = value;
+						await this.plugin.saveClarifaiSettings();
 					}));
 
 		new Setting(containerEl)
 				.setName('includeMentions')
 				.setDesc('Include paragraphs from mentions (linked, unliked).')
 				.addToggle(v => v
-					.setValue(this.plugin.settings.context.includeMentions )
+					.setValue(this.plugin.clarifaiSettings.context.includeMentions )
 					.onChange(async (value) => {
-						this.plugin.settings.context.includeMentions = value;
-						await this.plugin.saveSettings();
+						this.plugin.clarifaiSettings.context.includeMentions = value;
+						await this.plugin.saveClarifaiSettings();
 					}));
 
 		new Setting(containerEl)
 					.setName('includeHighlights')
 					.setDesc('Include Obsidian Highlights.')
 					.addToggle(v => v
-						.setValue(this.plugin.settings.context.includeHighlights )
+						.setValue(this.plugin.clarifaiSettings.context.includeHighlights )
 						.onChange(async (value) => {
-							this.plugin.settings.context.includeHighlights = value;
-							await this.plugin.saveSettings();
+							this.plugin.clarifaiSettings.context.includeHighlights = value;
+							await this.plugin.saveClarifaiSettings();
 						}));
-
-	
 		}
-
 }

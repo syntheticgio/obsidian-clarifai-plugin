@@ -1,5 +1,5 @@
 import {App,addIcon, Notice, Plugin, PluginSettingTab, Setting, request, MarkdownView, Editor, parseFrontMatterAliases, MetadataCache} from 'obsidian';
-import {TextGeneratorSettings} from './types';
+import {ClarifaiTextGeneratorSettings} from './types';
 import TextGeneratorPlugin from './main';
 import ReqFormatter from './reqFormatter';
 import { SetPath } from './ui/setPath';
@@ -19,7 +19,7 @@ export default class TextGenerator {
         this.reqFormatter = new ReqFormatter(app,plugin,this.contextManager);
 	}
     
-    async generate(prompt:string,insertMetadata: boolean = false,params: any=this.plugin.settings,templatePath:string="") {
+    async generate(prompt:string,insertMetadata: boolean = false,params: any=this.plugin.clarifaiSettings,templatePath:string="") {
         if(!this.plugin.processing){
             let reqParameters:any = this.reqFormatter.addContext(params,prompt);
             reqParameters=this.reqFormatter.prepareReqParameters(reqParameters,insertMetadata,templatePath);
@@ -40,7 +40,8 @@ export default class TextGenerator {
         }
     }
     
-    async generateFromTemplate(params: TextGeneratorSettings, templatePath: string, insertMetadata: boolean = false,editor:Editor,activeFile:boolean=true) {
+    async generateFromTemplate(params: ClarifaiTextGeneratorSettings, templatePath: string, insertMetadata: boolean = false,editor:Editor,activeFile:boolean=true) {
+        console.log("Generate from Template");
         const cursor= editor.getCursor();
         const context = await this.contextManager.getContext(editor,insertMetadata,templatePath);
         const text = await this.generate(context,insertMetadata,params,templatePath);
@@ -58,9 +59,11 @@ export default class TextGenerator {
           }  
     }
     
-    async generateInEditor(params: TextGeneratorSettings, insertMetadata: boolean = false,editor:Editor) {
+    async generateInEditor(params: ClarifaiTextGeneratorSettings, insertMetadata: boolean = false,editor:Editor) {
+        console.log("Generate in Editor");
         const cursor= editor.getCursor();
         const text = await this.generate(await this.contextManager.getContext(editor,insertMetadata),insertMetadata,params);
+        console.log("Finished generation");
         this.insertGeneratedText(text,editor,cursor);
     }
   
@@ -70,7 +73,7 @@ export default class TextGenerator {
         this.insertGeneratedText(text,editor,cursor);
     }
 
-    async createToFile(params: TextGeneratorSettings, templatePath: string, insertMetadata: boolean = false,editor:Editor,activeFile:boolean=true){
+    async createToFile(params: ClarifaiTextGeneratorSettings, templatePath: string, insertMetadata: boolean = false,editor:Editor,activeFile:boolean=true){
         const context = await this.contextManager.getContext(editor,insertMetadata,templatePath);
 
         if(activeFile===false){
@@ -115,7 +118,7 @@ const promptInfo=
         } else if (!metadata["frontmatter"].hasOwnProperty("PromptInfo")) {
             templateContent=templateContent.replace("---",`---\n${promptInfo}`)
         } 
-        const suggestedPath = `${this.plugin.settings.promptsPath}/local/${title}.md`;
+        const suggestedPath = `${this.plugin.clarifaiSettings.promptsPath}/local/${title}.md`;
         new SetPath(this.app,suggestedPath,async (path: string) => {
             const file= await createFileWithInput(path,templateContent,this.app);
             openFile(this.app,file);
@@ -123,18 +126,26 @@ const promptInfo=
         }
 
     async getGeneratedText(reqParams: any) {
-            const extractResult = reqParams?.extractResult;
-            delete reqParams?.extractResult;
-            let requestResults;
-            try {
-                requestResults = JSON.parse(await request(reqParams));
-                console.log({requestResults});
-            } catch (error) {
-                console.error(requestResults,error);
-                return Promise.reject(error);
-            }
-            const text = eval(extractResult);
-            return text
+        console.log("GetGeneratedText");
+        const extractResult = reqParams?.extractResult;
+        delete reqParams?.extractResult;
+        let requestResults;
+        try {
+            requestResults = JSON.parse(await request(reqParams));
+            console.log({requestResults});
+        } catch (error) {
+            console.log("Got Error");
+            console.error(requestResults,error);
+            return Promise.reject(error);
+        }
+        console.log("Full text: " + requestResults.outputs[0].data.text["raw"]);
+        console.log("Input Text: " + requestResults.outputs[0].input.data.text["raw"]);
+        const text = requestResults.outputs[0].data.text["raw"].replace(requestResults.outputs[0].input.data.text["raw"], " ");
+        
+        // const text = requestResults.outputs[0].data.text["raw"];
+        // const text = eval(extractResult);
+        console.log("Evaled: " + text);
+        return text
     }
 
     insertGeneratedText(text: string,editor:Editor,cur:any=null) {

@@ -1,6 +1,7 @@
 import {addIcon, Notice, Plugin, MarkdownView, Editor,MarkdownRenderer,MarkdownPostProcessorContext} from 'obsidian';
 import {ExampleModal} from './model';
-import {TextGeneratorSettings,Context} from './types';
+import {ClarifaiTextGeneratorSettings, Context} from './types';
+
 import {GENERATE_ICON,GENERATE_META_ICON} from './constants';
 import TextGeneratorSettingTab from './ui/settingsPage';
 import {SetMaxTokens} from './ui/setMaxTokens';
@@ -12,15 +13,14 @@ import { EditorView } from "@codemirror/view";
 import {spinnersPlugin} from './plugin';
 import Handlebars from 'handlebars';
 
-const DEFAULT_SETTINGS: TextGeneratorSettings = {
-	api_key: "",
-	engine: "text-davinci-003",
-	max_tokens: 160,
-	temperature: 0.7,
-	frequency_penalty: 0.5,
+const DEFAULT_CLARIFAI_SETTINGS: ClarifaiTextGeneratorSettings = {
+	model: "text-generation-english-gpt2",
 	prompt: "",
 	showStatusBar: true,
-	promptsPath:"textgenerator/prompts",
+	max_tokens: 160,
+	promptsPath: "textgenerator/prompts",
+	user_id: "textgen",
+	app_id: "text-generation",
 	context:{
 		includeTitle:false,
 		includeStaredBlocks:true,
@@ -33,7 +33,7 @@ const DEFAULT_SETTINGS: TextGeneratorSettings = {
 }
 
 export default class TextGeneratorPlugin extends Plugin {
-	settings: TextGeneratorSettings;
+	clarifaiSettings: ClarifaiTextGeneratorSettings;
 	statusBarItemEl: any;
 	textGenerator:TextGenerator;
 	packageManager:PackageManager;
@@ -44,8 +44,8 @@ export default class TextGeneratorPlugin extends Plugin {
         if (text.length > 0) {
             text2 = `: ${text}`;
         }
-        if (this.settings.showStatusBar) {
-            this.statusBarItemEl.setText(`Text Generator(${this.settings.max_tokens})${text2}`);
+        if (this.clarifaiSettings.showStatusBar) {
+            this.statusBarItemEl.setText(`Clarifai Text Generator ${text2}`);
         }
     }
 
@@ -53,17 +53,19 @@ export default class TextGeneratorPlugin extends Plugin {
 		this.updateStatusBar(`processing... `);
 		this.processing=true;
 		const activeView = this.getActiveView();
-			if (activeView !== null) {
-				const editor = activeView.editor;
-				// @ts-expect-error, not typed
-				const editorView = activeView.editor.cm as EditorView;
-				const plugin = editorView.plugin(spinnersPlugin);
+		console.log("GetActiveView");
+		if (activeView !== null) {
+			const editor = activeView.editor;
+			// @ts-expect-error, not typed
+			const editorView = activeView.editor.cm as EditorView;
+			const plugin = editorView.plugin(spinnersPlugin);
 
-				if (plugin) {
-					plugin.add(editor.posToOffset(editor.getCursor("to")),editorView);
-					this.app.workspace.updateOptions();
-				}
+			if (plugin) {
+				plugin.add(editor.posToOffset(editor.getCursor("to")),editorView);
+				this.app.workspace.updateOptions();
 			}
+		}
+		console.log("Finished processing");
 	}
 
 	endProcessing(){ 
@@ -83,7 +85,7 @@ export default class TextGeneratorPlugin extends Plugin {
 	}
 
 	handelError(error:any){
-		new Notice("🔴Error:Text Generator Plugin: Error check console CTRL+SHIFT+I");
+		new Notice("🔴 Error: Clarifai Text Generator Plugin: Error check console CTRL+SHIFT+I");
 		console.error(error);
 		this.updateStatusBar(`Error check console`);
 		setTimeout(()=>this.updateStatusBar(``),3000);
@@ -100,9 +102,10 @@ export default class TextGeneratorPlugin extends Plugin {
     }
 	
 	async onload() {
+		// TODO: Use clarifai icon?
 		addIcon("GENERATE_ICON",GENERATE_ICON);
 		addIcon("GENERATE_META_ICON",GENERATE_META_ICON);
-		await this.loadSettings();
+		await this.loadClarifaiSettings();
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new TextGeneratorSettingTab(this.app, this));
 		this.textGenerator=new TextGenerator(this.app,this);
@@ -118,17 +121,18 @@ export default class TextGeneratorPlugin extends Plugin {
 			if (activeView !== null) {
 			const editor = activeView.editor;
 			try {
-				await this.textGenerator.generateInEditor(this.settings,false,editor);
+				await this.textGenerator.generateInEditor(this.clarifaiSettings,false,editor);
 			} catch (error) {
 				this.handelError(error);
 			}
 			}
 		});
 
-		const ribbonIconEl2 = this.addRibbonIcon('boxes', 'Text Generator: Templates Packages Manager', async (evt: MouseEvent) => {
-			new PackageManagerUI(this.app,this,async (result: string) => {
-			}).open();
-		});
+		// TODO: Example of how to add a ribbon icon; maybe a link to Clarifai?
+		// const ribbonIconEl2 = this.addRibbonIcon('boxes', 'Text Generator: Templates Packages Manager', async (evt: MouseEvent) => {
+		// 	new PackageManagerUI(this.app,this,async (result: string) => {
+		// 	}).open();
+		// });
 
 
 		this.addCommand({
@@ -138,7 +142,7 @@ export default class TextGeneratorPlugin extends Plugin {
 			hotkeys: [{ modifiers: ["Mod"], key: "j" }],
 			editorCallback: async (editor: Editor) => {
 				try {
-					await this.textGenerator.generateInEditor(this.settings,false,editor);
+					await this.textGenerator.generateInEditor(this.clarifaiSettings,false,editor);
 				} catch (error) {
 					this.handelError(error);
 				}	
@@ -152,7 +156,7 @@ export default class TextGeneratorPlugin extends Plugin {
 			hotkeys: [{ modifiers: ["Mod",'Alt'], key: "j" }],
 			editorCallback: async (editor: Editor) => {
 				try {
-					await this.textGenerator.generateInEditor(this.settings,true,editor);
+					await this.textGenerator.generateInEditor(this.clarifaiSettings,true,editor);
 					this.updateStatusBar(``);
 				} catch (error) {
 					this.handelError(error);
@@ -168,7 +172,7 @@ export default class TextGeneratorPlugin extends Plugin {
 			editorCallback: async (editor: Editor) => {
 				try {
 					new ExampleModal(this.app, this,async (result) => {		
-						await this.textGenerator.generateFromTemplate(this.settings, result.path, true, editor,true);		
+						await this.textGenerator.generateFromTemplate(this.clarifaiSettings, result.path, true, editor,true);		
 					  },'Generate and Insert Template').open();
 				} catch (error) {
 					this.handelError(error);
@@ -184,7 +188,7 @@ export default class TextGeneratorPlugin extends Plugin {
 			editorCallback: async (editor: Editor) => {
 				try {
 					new ExampleModal(this.app, this,async (result) => {
-						await this.textGenerator.generateFromTemplate(this.settings, result.path, true, editor,false);
+						await this.textGenerator.generateFromTemplate(this.clarifaiSettings, result.path, true, editor,false);
 					  },'Generate and Create a New File From Template').open();
 					
 				} catch (error) {
@@ -201,7 +205,7 @@ export default class TextGeneratorPlugin extends Plugin {
 			editorCallback: async (editor: Editor) => {
 				try {
 					new ExampleModal(this.app, this,async (result) => {
-						await this.textGenerator.createToFile(this.settings, result.path, true, editor,true);
+						await this.textGenerator.createToFile(this.clarifaiSettings, result.path, true, editor,true);
 					  },'Insert Template').open();
 				} catch (error) {
 					this.handelError(error);
@@ -217,7 +221,7 @@ export default class TextGeneratorPlugin extends Plugin {
 			editorCallback: async (editor: Editor) => {
 				try {
 					new ExampleModal(this.app, this,async (result) => {
-						await this.textGenerator.createToFile(this.settings, result.path, true, editor,false);
+						await this.textGenerator.createToFile(this.clarifaiSettings, result.path, true, editor,false);
 					  },'Create a New File From Template').open();
 				} catch (error) {
 					this.handelError(error);
@@ -231,9 +235,9 @@ export default class TextGeneratorPlugin extends Plugin {
 			icon: 'separator-horizontal',
 			hotkeys: [{ modifiers: ["Alt"], key: "1" }],
 			callback: async () => {
-				new SetMaxTokens(this.app,this,this.settings.max_tokens.toString(),async (result: string) => {
-					this.settings.max_tokens = parseInt(result);
-					await this.saveSettings();
+				new SetMaxTokens(this.app,this,this.clarifaiSettings.max_tokens.toString(),async (result: string) => {
+					this.clarifaiSettings.max_tokens = parseInt(result);
+					await this.saveClarifaiSettings();
 					new Notice(`Set Max Tokens to ${result}!`);
 				  }).open();
 
@@ -248,8 +252,8 @@ export default class TextGeneratorPlugin extends Plugin {
 			callback: async () => {
 				try {
 					new SetModel(this.app, this,async (result) => {
-						this.settings.engine=result;
-						await this.saveSettings();
+						this.clarifaiSettings.model=result;
+						await this.saveClarifaiSettings();
 					  },'Choose a model').open();
 				} catch (error) {
 					this.handelError(error);
@@ -315,13 +319,22 @@ export default class TextGeneratorPlugin extends Plugin {
 		
 	}
 
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+	// async loadSettings() {
+	// 	this.settings = Object.assign({}, CLARIFAI_DEFAULT_SETTINGS, await this.loadData());
+	// }
+
+	async loadClarifaiSettings() {
+		this.clarifaiSettings = Object.assign({}, DEFAULT_CLARIFAI_SETTINGS, await this.loadData());
 	}
 
-	async saveSettings() {
-		await this.saveData(this.settings);
+	// async saveSettings() {
+	// 	await this.saveData(this.settings);
+	// }
+
+	async saveClarifaiSettings() {
+		await this.saveData(this.clarifaiSettings);
 	}
+
 	
 
 	createRunButton(label:string,svg:string) {

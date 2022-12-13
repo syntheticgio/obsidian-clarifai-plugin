@@ -37,7 +37,7 @@ export default class ContextManager {
     }
 
     async getTemplateContext(editor:Editor,templatePath:string=""){
-        const contextOptions:Context = this.plugin.settings.context;
+        const contextOptions:Context = this.plugin.clarifaiSettings.context;
         const title = this.getActiveFileTitle();
         const selection = this.getSelection(editor); 
         const context = await this.getDefaultContext(editor);
@@ -63,7 +63,7 @@ export default class ContextManager {
     }
     
     async getDefaultContext(editor:Editor){
-        const contextOptions:Context = this.plugin.settings.context;
+        const contextOptions:Context = this.plugin.clarifaiSettings.context;
        
         const title = this.getActiveFileTitle();
         const selection = this.getSelection(editor); 
