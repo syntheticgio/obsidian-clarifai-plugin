@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-clarifai-plugin",
-	"version": "0.1.0",
+	"version": "1.0.0",
 	"description": "This plugin allows you to access the Clarifai platform to generate text (GPT2) or images (dall-e).  This plugin is based on the obsidian-textgenerator-plugin.",
 	"main": "main.js",
 	"scripts": {

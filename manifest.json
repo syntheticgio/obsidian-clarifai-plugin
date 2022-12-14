@@ -1,7 +1,7 @@
 {
     "id": "obsidian-clarifai-plugin",
     "name": "Clarifai Content Generator",
-    "version": "0.1.0",
+    "version": "1.0.0",
 	"minAppVersion": "0.12.0",
 	"description": "Text generation (GPT2) and image generation (dall-e) using the Clarifai platform.",
     "author": "John Torcivia",
