@@ -8,14 +8,19 @@ type Context= {
   includeHighlights:boolean;
 }
 
-type ClarifaiTextGeneratorSettings= {
+type ClarifaiSettings = {
 	pat: string;
-  model: string;
+  text_model: string;
+  image_model: string;
   prompt: string;
-  models: any;
-  models_versions: any;
-  user_id: string;
-  app_id: string;
+  text_models: any;
+  image_models: any;
+  text_models_versions: any;
+  image_models_versions: any;
+  text_user_id: string;
+  text_app_id: string;
+  image_user_id: string;
+  image_app_id: string;
 
 	max_tokens: number;
 
@@ -85,5 +90,5 @@ export type {
   Context,
   InstalledPackage,
   TextGeneratorConfiguration,
-  ClarifaiTextGeneratorSettings
+  ClarifaiSettings
 }

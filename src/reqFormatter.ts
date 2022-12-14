@@ -1,5 +1,5 @@
 import {App,addIcon, Notice, Plugin, PluginSettingTab, Setting, request, MarkdownView, Editor, parseFrontMatterAliases} from 'obsidian';
-import {ClarifaiTextGeneratorSettings} from './types';
+import {ClarifaiSettings} from './types';
 import TextGeneratorPlugin from './main';
 import {IGNORE_IN_YMAL} from './constants';
 import ContextManager from './ContextManager';
@@ -14,7 +14,7 @@ export default class ReqFormatter {
         this.contextManager=contextManager;
 	}
 
-    addContext(parameters: ClarifaiTextGeneratorSettings,prompt: string){
+    addContext(parameters: ClarifaiSettings,prompt: string){
         const params={
            ...parameters,
            prompt	
@@ -22,7 +22,7 @@ export default class ReqFormatter {
        return params;
    }
    
-    prepareReqParameters(params: ClarifaiTextGeneratorSettings,insertMetadata: boolean,templatePath:string="") {
+    prepareReqParameters(params: ClarifaiSettings,insertMetadata: boolean,templatePath:string="") {
         // TODO: Need to make the actual request here....
        let bodyParams:any = {
             "inputs": [
@@ -38,7 +38,7 @@ export default class ReqFormatter {
        };
        
        let reqParams = {
-           url: `https://api.clarifai.com/v2/users/${params.user_id}/apps/${params.app_id}/models/${params.model}/outputs`,
+           url: `https://api.clarifai.com/v2/users/${params.text_user_id}/apps/${params.text_app_id}/models/${params.text_model}/outputs`,
            method: 'POST',
            body:'',
            headers: {

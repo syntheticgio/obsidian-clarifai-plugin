@@ -1,6 +1,6 @@
 import {addIcon, Notice, Plugin, MarkdownView, Editor,MarkdownRenderer,MarkdownPostProcessorContext} from 'obsidian';
 import {ExampleModal} from './model';
-import {ClarifaiTextGeneratorSettings, Context} from './types';
+import {ClarifaiSettings, Context} from './types';
 
 import {GENERATE_META_ICON,WRITE_ICON,CREATE_IMAGE} from './constants';
 import TextGeneratorSettingTab from './ui/settingsPage';
@@ -13,14 +13,20 @@ import { EditorView } from "@codemirror/view";
 import {spinnersPlugin} from './plugin';
 import Handlebars from 'handlebars';
 
-const DEFAULT_CLARIFAI_SETTINGS: ClarifaiTextGeneratorSettings = {
-	model: "text-generation-english-gpt2",
+
+const DEFAULT_CLARIFAI_SETTINGS: ClarifaiSettings = {
+	pat: "",
+	text_model: "text-generation-english-gpt2",
+	image_model: "",
+
 	prompt: "",
 	showStatusBar: true,
 	max_tokens: 160,
 	promptsPath: "textgenerator/prompts",
-	user_id: "textgen",
-	app_id: "text-generation",
+	text_user_id: "textgen",
+	text_app_id: "text-generation",
+	image_user_id: "",
+	image_app_id: "",
 	context:{
 		includeTitle:false,
 		includeStaredBlocks:true,
@@ -33,7 +39,8 @@ const DEFAULT_CLARIFAI_SETTINGS: ClarifaiTextGeneratorSettings = {
 }
 
 export default class TextGeneratorPlugin extends Plugin {
-	clarifaiSettings: ClarifaiTextGeneratorSettings;
+	
+	clarifaiSettings: ClarifaiSettings;
 	statusBarItemEl: any;
 	textGenerator:TextGenerator;
 	packageManager:PackageManager;
@@ -273,6 +280,7 @@ export default class TextGeneratorPlugin extends Plugin {
 			}
 		});
 
+		// TODO: Not sure where this is used, but this is now set to set the text model
 		this.addCommand({
 			id: 'set-model',
 			name: 'Choose a model',
@@ -281,7 +289,7 @@ export default class TextGeneratorPlugin extends Plugin {
 			callback: async () => {
 				try {
 					new SetModel(this.app, this,async (result) => {
-						this.clarifaiSettings.model=result;
+						this.clarifaiSettings.text_model=result;
 						await this.saveClarifaiSettings();
 					  },'Choose a model').open();
 				} catch (error) {
@@ -321,7 +329,6 @@ export default class TextGeneratorPlugin extends Plugin {
 				setTimeout(async ()=>
 				{
 				try {
-
 					const template = Handlebars.compile(source, { noEscape: true, strict: true });
 					const markdown = template(await this.textGenerator.contextManager.getTemplateContext(this.getActiveView().editor));
 					await MarkdownRenderer.renderMarkdown(
@@ -337,8 +344,6 @@ export default class TextGeneratorPlugin extends Plugin {
 			},100);
 			}
 	
-
-		
 		this.registerMarkdownCodeBlockProcessor(
 			'tg',
 			async (source, el, ctx) => blockTgHandler(source, el, ctx)
@@ -348,31 +353,20 @@ export default class TextGeneratorPlugin extends Plugin {
 		
 	}
 
-	// async loadSettings() {
-	// 	this.settings = Object.assign({}, CLARIFAI_DEFAULT_SETTINGS, await this.loadData());
-	// }
-
 	async loadClarifaiSettings() {
 		this.clarifaiSettings = Object.assign({}, DEFAULT_CLARIFAI_SETTINGS, await this.loadData());
 	}
-
-	// async saveSettings() {
-	// 	await this.saveData(this.settings);
-	// }
 
 	async saveClarifaiSettings() {
 		await this.saveData(this.clarifaiSettings);
 	}
 
-	
-
 	createRunButton(label:string,svg:string) {
 		const button = document.createElement("div");
 		button.classList.add("clickable-icon");
 		button.setAttribute("aria-label",label);
-//aria-label-position="right"
+		//aria-label-position="right"
 		button.innerHTML=svg;
-		
 		return button;
 	}
 

@@ -1,5 +1,5 @@
 import {App,addIcon, Notice, Plugin, PluginSettingTab, Setting, request, MarkdownView, Editor, parseFrontMatterAliases, MetadataCache} from 'obsidian';
-import {ClarifaiTextGeneratorSettings} from './types';
+import {ClarifaiSettings} from './types';
 import TextGeneratorPlugin from './main';
 import ReqFormatter from './reqFormatter';
 import { SetPath } from './ui/setPath';
@@ -40,7 +40,7 @@ export default class TextGenerator {
         }
     }
     
-    async generateFromTemplate(params: ClarifaiTextGeneratorSettings, templatePath: string, insertMetadata: boolean = false,editor:Editor,activeFile:boolean=true) {
+    async generateFromTemplate(params: ClarifaiSettings, templatePath: string, insertMetadata: boolean = false,editor:Editor,activeFile:boolean=true) {
         console.log("Generate from Template");
         const cursor= editor.getCursor();
         const context = await this.contextManager.getContext(editor,insertMetadata,templatePath);
@@ -59,7 +59,7 @@ export default class TextGenerator {
           }  
     }
     
-    async generateInEditor(params: ClarifaiTextGeneratorSettings, insertMetadata: boolean = false,editor:Editor) {
+    async generateInEditor(params: ClarifaiSettings, insertMetadata: boolean = false,editor:Editor) {
         console.log("Generate in Editor");
         const cursor= editor.getCursor();
         const text = await this.generate(await this.contextManager.getContext(editor,insertMetadata),insertMetadata,params);
@@ -73,7 +73,7 @@ export default class TextGenerator {
         this.insertGeneratedText(text,editor,cursor);
     }
 
-    async createToFile(params: ClarifaiTextGeneratorSettings, templatePath: string, insertMetadata: boolean = false,editor:Editor,activeFile:boolean=true){
+    async createToFile(params: ClarifaiSettings, templatePath: string, insertMetadata: boolean = false,editor:Editor,activeFile:boolean=true){
         const context = await this.contextManager.getContext(editor,insertMetadata,templatePath);
 
         if(activeFile===false){
@@ -99,15 +99,15 @@ export default class TextGenerator {
 
 
     async createTemplate(content:string,title:string=""){
-const promptInfo= 
-`PromptInfo:
- promptId: ${title}
- name: 🗞️${title} 
- description: ${title}
- required_values: 
- author: 
- tags: 
- version: 0.0.1`
+        const promptInfo= 
+        `PromptInfo:
+        promptId: ${title}
+        name: 🗞️${title} 
+        description: ${title}
+        required_values: 
+        author: 
+        tags: 
+        version: 0.0.1`
         
         let templateContent = content;
         const metadata = this.contextManager.getMetaData();

@@ -8,12 +8,22 @@ export default class TextGeneratorSettingTab extends PluginSettingTab {
 	constructor(app: App, plugin: TextGeneratorPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
-		let models=new Map();
-		if (this.plugin.clarifaiSettings.models?.size>0){
-			models=this.plugin.clarifaiSettings.models;
+		let text_models=new Map();
+		let image_models=new Map();
+		
+		if (this.plugin.clarifaiSettings.text_models?.size>0){
+			text_models=this.plugin.clarifaiSettings.text_models;
 		} else {
-			["text-generation-english-gpt2", "text-generation-poems-chinese-gpt2"].forEach(e=>models.set(e,''));
-			this.plugin.clarifaiSettings.models = models;
+			["text-generation-english-gpt2", "text-generation-poems-chinese-gpt2", "text-generation-sentence-english-gpt2", "text-generation-headlines-english", "text-generation-questions-english-t5"].forEach(e=>text_models.set(e,''));
+			this.plugin.clarifaiSettings.text_models = text_models;
+			this.plugin.saveClarifaiSettings();
+		}
+
+		if (this.plugin.clarifaiSettings.image_models?.size>0){
+			image_models=this.plugin.clarifaiSettings.image_models;
+		} else {
+			["", ""].forEach(e=>image_models.set(e,''));
+			this.plugin.clarifaiSettings.image_models = image_models;
 			this.plugin.saveClarifaiSettings();
 		}
 	}
@@ -26,52 +36,18 @@ export default class TextGeneratorSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		containerEl.createEl('H1', {
-			text: 'Text Generator Plugin Settings'
+			text: 'Clarifai Content Generation Settings'
 		});
 
 		containerEl.createEl('H2', {
-			text: 'Clarifai Settings'
+			text: 'Credentials'
 		});
 		let inputEl;
 		containerEl.appendChild(createEl("a", {text: 'Create Clarifai account',href:"https://clarifai.com/signup?utm_source=clarifai-obsidian-plugin&utm_medium=referral", cls:'linkMoreInfo'}))
 		
-		// const ClarifaiUsername=new Setting(containerEl)
-		// 	.setName('Username')
-		// 	.setDesc('Enter your Clarifai platform username.')
-		// 	.addText(text => text
-		// 		.setPlaceholder('Enter your username')
-		// 		.setValue(this.plugin.clarifaiSettings.user_id)
-		// 		.onChange(async (value) => {
-		// 			this.plugin.clarifaiSettings.user_id = value;
-		// 			await this.plugin.saveClarifaiSettings();
-		// 		}
-		// 		)
-		// 		.then((textEl)=>{
-		// 			inputEl=textEl
-		// 		})
-		// 		.inputEl.setAttribute('type','clear')
-		// 		)
-		// const ClarifaiAppID=new Setting(containerEl)
-		// 	.setName('Application ID')
-		// 	.setDesc('Enter an application ID.  You can create an application for the purposes of calling this model.')
-		// 	.addText(text => text
-		// 		.setPlaceholder('Enter your application ID')
-		// 		.setValue(this.plugin.clarifaiSettings.app_id)
-		// 		.onChange(async (value) => {
-		// 			this.plugin.clarifaiSettings.app_id = value;
-		// 			await this.plugin.saveClarifaiSettings();
-		// 		}
-		// 		)
-		// 		.then((textEl)=>{
-		// 			inputEl=textEl
-		// 		})
-		// 		.inputEl.setAttribute('type','clear')
-		// 		)
-
-		
 		const ClarifaiPAT=new Setting(containerEl)
 			.setName('PAT')
-			.setDesc('You will need a Personal Access Token (PAT) from the Clarifai platform.  The minimal permission scoping required for text generation is the predict scope.')
+			.setDesc('You will need a Personal Access Token (PAT) from the Clarifai platform.  The minimal permission scoping required for text or image generation is the predict scope.')
 			.addText(text => text
 				.setPlaceholder('Enter your PAT')
 				.setValue(this.plugin.clarifaiSettings.pat)
@@ -96,63 +72,103 @@ export default class TextGeneratorSettingTab extends PluginSettingTab {
 			}));
 		containerEl.appendChild(createEl("a", {text: 'PAT documentation',href:"https://docs.clarifai.com/clarifai-basics/authentication/personal-access-tokens", cls:'linkMoreInfo'}))
 	
-		
-		let models=new Map();
-		if (this.plugin.clarifaiSettings.models?.size>0){
-			models=this.plugin.clarifaiSettings.models;
+		// TEXT MODELS
+		containerEl.createEl('H2', {
+			text: 'Text Generation Settings'
+		});
+
+		let text_models=new Map();
+		if (this.plugin.clarifaiSettings.text_models?.size>0){
+			text_models=this.plugin.clarifaiSettings.text_models;
 		} else {
-			["text-generation-english-gpt2", "text-generation-poems-chinese-gpt2"].forEach(e=>models.set(e,''));
-			this.plugin.clarifaiSettings.models = models;
+			["text-generation-english-gpt2", "text-generation-poems-chinese-gpt2", "text-generation-sentence-english-gpt2", "text-generation-headlines-english", "text-generation-questions-english-t5"].forEach(e=>models.set(e,''));
+			this.plugin.clarifaiSettings.text_models = text_models;
 			this.plugin.saveClarifaiSettings();
 		}
 		
 		let cbModelsEl:any
 		new Setting(containerEl)
-			.setName('Model')
-			.setDesc('GPT2 is a transformers based model trained on a large amount of English data.')
+			.setName('Text Generation Model')
+			.setDesc('Various Clarifai supported models for text generation.')
 			.addDropdown((cb) => {
 				cbModelsEl =cb;
-				models.forEach((value,key)=>{
+				text_models.forEach((value,key)=>{
 					cb.addOption(key, key);
 				})
-				cb.setValue(this.plugin.clarifaiSettings.model);
+				cb.setValue(this.plugin.clarifaiSettings.text_model);
 				cb.onChange(async (value) => {
-					this.plugin.clarifaiSettings.model = value;
+					this.plugin.clarifaiSettings.text_model = value;
 					// TODO: Probably a better way to do this but need a three way map; maybe a dict but
-					//	     don't feel like modifying the code substantially :D
-					if (value == "text-generation-english-gpt2" || value == "text-generation-poems-chinese-gpt2") {
-						this.plugin.clarifaiSettings.user_id = "textgen";
-						this.plugin.clarifaiSettings.app_id = "text-generation";
-					}
+					//	     as of now all of the text generation models have the same user_id and app_id
+					// if (value == "text-generation-english-gpt2" || value == "text-generation-poems-chinese-gpt2") {
+						this.plugin.clarifaiSettings.text_user_id = "textgen";
+						this.plugin.clarifaiSettings.text_app_id = "text-generation";
+					// }
 					await this.plugin.saveClarifaiSettings();
 				});
 			})
 		
-		containerEl.appendChild(createEl("a", {text: 'Model information',href:"https://clarifai.com/textgen/text-generation/models/text-generation-english-gpt2", cls:'linkMoreInfo'}))
+		containerEl.appendChild(createEl("a", {text: 'Text Generation Model information',href:"https://clarifai.com/explore/models?searchQuery=text+generation&page=1&perPage=24", cls:'linkMoreInfo'}))
 
-		containerEl.createEl('H2', {
-				text: 'Prompt parameters (completions)'
-			});	
+		// containerEl.createEl('H2', {
+		// 		text: 'Prompt parameters (completions)'
+		// 	});	
 		// containerEl.createEl('H3', {
 		// 		text: 'You can specify more paramters in the Frontmatter YMAL'
 		// 	});	
 		// containerEl.appendChild(createEl("a", {text: 'API documentation',href:"https://beta.openai.com/docs/api-reference/completions",cls:'linkMoreInfo'}))	
-		new Setting(containerEl)
-			.setName('Max tokens')
-			.setDesc('The max number of the tokens that will be generated (1000 tokens ~ 750 words)')
-			.addText(text => text
-				.setPlaceholder('max_tokens')
-				.setValue(this.plugin.clarifaiSettings.max_tokens.toString())
-				.onChange(async (value) => {
-					this.plugin.clarifaiSettings.max_tokens = parseInt(value);
-					await this.plugin.saveClarifaiSettings();
-				}));
+		// new Setting(containerEl)
+		// 	.setName('Max tokens')
+		// 	.setDesc('The max number of the tokens that will be generated (1000 tokens ~ 750 words)')
+		// 	.addText(text => text
+		// 		.setPlaceholder('max_tokens')
+		// 		.setValue(this.plugin.clarifaiSettings.max_tokens.toString())
+		// 		.onChange(async (value) => {
+		// 			this.plugin.clarifaiSettings.max_tokens = parseInt(value);
+		// 			await this.plugin.saveClarifaiSettings();
+		// 		}));
 
-		containerEl.createEl('H1', {
-					text: 'Text Generator'
-				});	
-		containerEl.createEl('H3', {
-					text: 'General'
+		// IMAGE MODELS
+		containerEl.createEl('H2', {
+			text: 'Image Generation Model'
+		});
+
+		let image_models=new Map();
+		if (this.plugin.clarifaiSettings.image_models?.size>0){
+			image_models=this.plugin.clarifaiSettings.image_models;
+		} else {
+			["general-image-generator-dalle-mini"].forEach(e=>image_models.set(e,''));
+			this.plugin.clarifaiSettings.image_models = image_models;
+			this.plugin.saveClarifaiSettings();
+		}
+		
+		let cbModelsEl:any
+		new Setting(containerEl)
+			.setName('Image Generation Model')
+			.setDesc('Various Clarifai supported models for image generation.')
+			.addDropdown((cb) => {
+				cbModelsEl =cb;
+				image_models.forEach((value,key)=>{
+					cb.addOption(key, key);
+				})
+				cb.setValue(this.plugin.clarifaiSettings.image_model);
+				cb.onChange(async (value) => {
+					this.plugin.clarifaiSettings.image_model = value;
+					// TODO: Probably a better way to do this but need a three way map; maybe a dict but
+					//	     as of now all of the text generation models have the same user_id and app_id
+					// if (value == "general-image-generator-dalle-mini" || value == ....) {
+						this.plugin.clarifaiSettings.image_user_id = "borisdayma";
+						this.plugin.clarifaiSettings.image_app_id = "generative-art";
+					// }
+					await this.plugin.saveClarifaiSettings();
+				});
+			})
+		
+		containerEl.appendChild(createEl("a", {text: 'Image Generation Model information',href:"https://clarifai.com/borisdayma/generative-art", cls:'linkMoreInfo'}))
+
+		// GENERAL SETTINGS
+		containerEl.createEl('H2', {
+					text: 'General Settings'
 				});	
 		new Setting(containerEl)
 			.setName('Show Status in StatusBar')
@@ -176,8 +192,9 @@ export default class TextGeneratorSettingTab extends PluginSettingTab {
 			.inputEl.setAttribute('size','50')
 			)
 	
-		containerEl.createEl('H3', {
-				text: 'Considered Context'
+		// CONTEXT SETTINGS
+		containerEl.createEl('H2', {
+				text: 'Context Settings'
 			});	
 		
 		new Setting(containerEl)
@@ -201,6 +218,7 @@ export default class TextGeneratorSettingTab extends PluginSettingTab {
 				await this.plugin.saveClarifaiSettings();
 			}));
 		
+		// TODO: Need to figure out how to use the templates here...
 		containerEl.createEl('H3', {
 				text: 'Considered Context For Templates'
 			});	
